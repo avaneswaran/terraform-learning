@@ -29,6 +29,12 @@ Configures Vault using Terraform:
 ### postgres
 Deploys PostgreSQL on Kubernetes, integrated with Vault for dynamic credential generation.
 
+### consul
+Deploys HashiCorp Consul in dev mode for service discovery and configuration.
+
+### monitoring
+Deploys Prometheus and Grafana for cluster monitoring and visualization.
+
 ## Concepts Covered
 
 - Providers and resources
@@ -40,10 +46,27 @@ Deploys PostgreSQL on Kubernetes, integrated with Vault for dynamic credential g
 - Replace/rotate credentials
 - Dynamic database credentials with Vault
 
-## Dynamic Database Credentials Demo
+## Quick Access
 ```bash
-# Generate temporary PostgreSQL credentials
+# Vault UI
+kubectl port-forward -n vault svc/vault 8200:8200 &
+
+# Consul UI
+kubectl port-forward -n consul svc/consul 8500:8500 &
+
+# Grafana UI
+kubectl port-forward -n monitoring svc/grafana 3000:3000 &
+
+# Generate dynamic PostgreSQL credentials
+export VAULT_ADDR="http://127.0.0.1:8200"
+export VAULT_TOKEN="root"
 vault read database/creds/app-role
 ```
 
-Vault creates a real user in PostgreSQL with a TTL. When the lease expires, Vault automatically revokes the credentials.
+## Credentials
+
+| Service | Username | Password |
+|---------|----------|----------|
+| Vault | root token | root |
+| PostgreSQL | admin | rootpassword |
+| Grafana | admin | admin |
