@@ -65,3 +65,31 @@ path "*" {
 }
 EOT
 }
+
+# Enable database secrets engine
+resource "vault_mount" "database" {
+  path        = "database"
+  type        = "database"
+  description = "Database secrets engine"
+}
+
+# Configure PostgreSQL connection
+resource "vault_database_secret_backend_connection" "postgres" {
+  backend       = vault_mount.database.path
+  name          = "postgres"
+  allowed_roles = ["app-role"]
+
+  postgresql {
+    connection_url = "postgresql://admin:rootpassword@10.200.1.25:5432/appdb?sslmode=disable"
+  }
+}
+
+# Create a role that generates dynamic credentials
+resource "vault_database_secret_backend_role" "app_role" {
+  backend             = vault_mount.database.path
+  name                = "app-role"
+  db_name             = vault_database_secret_backend_connection.postgres.name
+  creation_statements = ["CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"]
+  default_ttl         = 3600
+  max_ttl             = 86400
+}

@@ -17,13 +17,17 @@ Terraform managing Kubernetes resources (namespaces, deployments, services).
 Reusable module for deploying containerized applications.
 
 ### vault-deploy
-Deploys HashiCorp Vault on Kubernetes.
+Deploys HashiCorp Vault on Kubernetes in dev mode.
 
 ### vault-config
 Configures Vault using Terraform:
-- KV secrets engine
+- KV v2 secrets engine
 - AppRole authentication
 - Policies
+- Database secrets engine with dynamic PostgreSQL credentials
+
+### postgres
+Deploys PostgreSQL on Kubernetes, integrated with Vault for dynamic credential generation.
 
 ## Concepts Covered
 
@@ -34,3 +38,12 @@ Configures Vault using Terraform:
 - State management
 - Import existing resources
 - Replace/rotate credentials
+- Dynamic database credentials with Vault
+
+## Dynamic Database Credentials Demo
+```bash
+# Generate temporary PostgreSQL credentials
+vault read database/creds/app-role
+```
+
+Vault creates a real user in PostgreSQL with a TTL. When the lease expires, Vault automatically revokes the credentials.
