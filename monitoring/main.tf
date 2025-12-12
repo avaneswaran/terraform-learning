@@ -140,3 +140,146 @@ resource "kubernetes_service" "grafana" {
     type = "ClusterIP"
   }
 }
+
+# Node Exporter - collects host metrics from each node
+resource "kubernetes_daemonset" "node_exporter" {
+  metadata {
+    name      = "node-exporter"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+    labels = {
+      app = "node-exporter"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        app = "node-exporter"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "node-exporter"
+        }
+      }
+
+      spec {
+        host_network = true
+        host_pid     = true
+
+        container {
+          name  = "node-exporter"
+          image = "prom/node-exporter:v1.6.1"
+
+          port {
+            container_port = 9100
+            host_port      = 9100
+          }
+        }
+      }
+    }
+  }
+}
+
+# Kube State Metrics
+resource "kubernetes_service_account" "kube_state_metrics" {
+  metadata {
+    name      = "kube-state-metrics"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+  }
+}
+
+resource "kubernetes_cluster_role" "kube_state_metrics" {
+  metadata {
+    name = "kube-state-metrics"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["nodes", "pods", "services", "namespaces", "endpoints"]
+    verbs      = ["list", "watch"]
+  }
+
+  rule {
+    api_groups = ["apps"]
+    resources  = ["deployments", "replicasets", "daemonsets"]
+    verbs      = ["list", "watch"]
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "kube_state_metrics" {
+  metadata {
+    name = "kube-state-metrics"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role.kube_state_metrics.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = kubernetes_service_account.kube_state_metrics.metadata[0].name
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+  }
+}
+
+resource "kubernetes_deployment" "kube_state_metrics" {
+  metadata {
+    name      = "kube-state-metrics"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = {
+        app = "kube-state-metrics"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "kube-state-metrics"
+        }
+      }
+
+      spec {
+        service_account_name = kubernetes_service_account.kube_state_metrics.metadata[0].name
+
+        container {
+          name  = "kube-state-metrics"
+          image = "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.10.0"
+
+          port {
+            container_port = 8080
+            name           = "http-metrics"
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "kube_state_metrics" {
+  metadata {
+    name      = "kube-state-metrics"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+  }
+
+  spec {
+    selector = {
+      app = "kube-state-metrics"
+    }
+
+    port {
+      port        = 8080
+      target_port = 8080
+    }
+  }
+}
