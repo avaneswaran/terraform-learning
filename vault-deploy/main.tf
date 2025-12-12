@@ -63,6 +63,11 @@ resource "kubernetes_deployment" "vault" {
             value = "http://127.0.0.1:8200"
           }
 
+          env {
+            name  = "VAULT_TELEMETRY_PROMETHEUS_RETENTION_TIME"
+            value = "30s"
+          }
+
           security_context {
             capabilities {
               add = ["IPC_LOCK"]

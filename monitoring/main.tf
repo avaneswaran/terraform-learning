@@ -283,3 +283,77 @@ resource "kubernetes_service" "kube_state_metrics" {
     }
   }
 }
+
+# Update Prometheus to use ConfigMap
+resource "kubernetes_deployment" "prometheus_v2" {
+  metadata {
+    name      = "prometheus-configured"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = {
+        app = "prometheus-configured"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "prometheus-configured"
+        }
+      }
+
+      spec {
+        container {
+          name  = "prometheus"
+          image = "prom/prometheus:v2.47.0"
+
+          args = [
+            "--config.file=/etc/prometheus/prometheus.yml",
+            "--storage.tsdb.path=/prometheus"
+          ]
+
+          port {
+            container_port = 9090
+          }
+
+          volume_mount {
+            name       = "config"
+            mount_path = "/etc/prometheus"
+          }
+        }
+
+        volume {
+          name = "config"
+          config_map {
+            name = kubernetes_config_map.prometheus_config.metadata[0].name
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "prometheus_configured" {
+  metadata {
+    name      = "prometheus-configured"
+    namespace = kubernetes_namespace.monitoring.metadata[0].name
+  }
+
+  spec {
+    selector = {
+      app = "prometheus-configured"
+    }
+
+    port {
+      port        = 9090
+      target_port = 9090
+    }
+
+    type = "ClusterIP"
+  }
+}

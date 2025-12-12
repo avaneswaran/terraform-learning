@@ -1,4 +1,4 @@
-resource "kubernetes_config_map" "prometheus" {
+resource "kubernetes_config_map" "prometheus_config" {
   metadata {
     name      = "prometheus-config"
     namespace = kubernetes_namespace.monitoring.metadata[0].name
@@ -16,11 +16,21 @@ resource "kubernetes_config_map" "prometheus" {
 
         - job_name: 'node-exporter'
           static_configs:
-            - targets: ['192.168.56.102:9100', '192.168.56.103:9100']
+            - targets:
+              - '192.168.56.102:9100'
+              - '192.168.56.103:9100'
+              labels:
+                cluster: 'k8s-lab'
 
-        - job_name: 'kube-state-metrics'
+        - job_name: 'vault'
+          metrics_path: '/v1/sys/metrics'
+          params:
+            format: ['prometheus']
+          bearer_token: 'root'
           static_configs:
-            - targets: ['kube-state-metrics.monitoring.svc.cluster.local:8080']
+            - targets: ['10.200.1.31:8200']
+              labels:
+                service: 'vault'
     EOT
   }
 }
