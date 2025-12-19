@@ -1,14 +1,5 @@
-# Terraform
 .terraform/
 *.tfstate
 *.tfstate.*
-*.tfstate.backup
+*.tfvars
 .terraform.lock.hcl
-
-# Sensitive
-*.pem
-*.key
-*secret*
-
-# OS
-.DS_Store
